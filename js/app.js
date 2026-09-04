@@ -346,6 +346,7 @@ function renderIntelList(){
   if(count) count.textContent = list.length + ' / ' + state.items.length + ' 条';
   if(!list.length){ box.innerHTML = '<div class="empty">没有符合条件的情报</div>'; return; }
   const now = Date.now();
+  const safeUrl = u => /^https?:\/\//i.test(u || '') ? D.esc(u) : null;
   box.innerHTML = list.map(i => {
     const m = D.SEV_META[i.severity] || D.SEV_META.info;
     const iocs = (i.iocs || []).map(o => {
@@ -364,7 +365,7 @@ function renderIntelList(){
           <span>${D.fmtDate(i.ts)}</span>
           <span class="tag" style="color:var(--purple)">${D.esc(i.category)}</span>
           ${i.region ? `<span>◉ ${D.esc(i.region)}</span>` : ''}
-          ${i.url && i.url !== '#' ? `<a href="${D.esc(i.url)}" target="_blank" rel="noopener">原文 ↗</a>` : ''}
+          ${safeUrl(i.url) ? `<a href="${safeUrl(i.url)}" target="_blank" rel="noopener">原文 ↗</a>` : ''}
           ${iocs}
         </div>
       </div>`;

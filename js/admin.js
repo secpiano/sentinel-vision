@@ -186,7 +186,7 @@ function renderTable(container){
       </tr></thead>
       <tbody>
         ${list.map(s => `
-          <tr data-id="${s.id}">
+          <tr data-id="${D.esc(s.id)}">
             <td><label class="switch"><input type="checkbox" data-act="toggle" ${s.enabled ? 'checked' : ''}><i></i></label></td>
             <td><span class="src-name">${D.esc(s.name)}</span>${s.builtIn ? ' <span class="badge url" style="font-size:9px;padding:1px 6px">内置</span>' : ''}<div style="font-size:10.5px;color:var(--txt-faint);margin-top:2px">${D.esc((s.desc||'').slice(0,30))}</div></td>
             <td><span class="badge ${TYPE_META[s.type]?.cls || 'url'}">${TYPE_META[s.type]?.label || s.type}</span></td>
