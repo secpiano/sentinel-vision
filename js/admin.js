@@ -140,7 +140,23 @@ function render(container){
       try{
         const arr = JSON.parse(document.getElementById('fImport').value);
         if(!Array.isArray(arr)) throw new Error('not array');
-        D.saveSources(arr);
+        const TYPES = ['rss','wechat','twitter','url','api'];
+        const clean = arr.filter(x => x && typeof x === 'object' && !Array.isArray(x)).map(x => ({
+          id: String(x.id || 'usr_' + Date.now().toString(36)).replace(/[^\w-]/g, '').slice(0, 40),
+          name: String(x.name || '').slice(0, 60),
+          type: TYPES.includes(x.type) ? x.type : 'rss',
+          url: /^https?:\/\//.test(String(x.url || '')) ? String(x.url) : '',
+          desc: String(x.desc || '').slice(0, 120),
+          region: x.region === 'cn' ? 'cn' : 'global',
+          lang: x.lang === 'en' ? 'en' : 'zh',
+          enabled: !!x.enabled,
+          health: typeof x.health === 'string' ? x.health.slice(0, 10) : '未知',
+          items: Number.isFinite(+x.items) ? Math.max(0, Math.min(999999, Math.floor(+x.items))) : 0,
+          lastSync: Number.isFinite(+x.lastSync) ? +x.lastSync : undefined,
+          builtIn: false
+        })).filter(x => x.name.length >= 2 && x.url);
+        if(!clean.length) throw new Error('empty');
+        D.saveSources(clean);
         SV.app.toast('导入成功：' + arr.length + ' 条源');
         render(container);
         SV.app.refreshStats && SV.app.refreshStats();
@@ -189,10 +205,10 @@ function renderTable(container){
           <tr data-id="${D.esc(s.id)}">
             <td><label class="switch"><input type="checkbox" data-act="toggle" ${s.enabled ? 'checked' : ''}><i></i></label></td>
             <td><span class="src-name">${D.esc(s.name)}</span>${s.builtIn ? ' <span class="badge url" style="font-size:9px;padding:1px 6px">内置</span>' : ''}<div style="font-size:10.5px;color:var(--txt-faint);margin-top:2px">${D.esc((s.desc||'').slice(0,30))}</div></td>
-            <td><span class="badge ${TYPE_META[s.type]?.cls || 'url'}">${TYPE_META[s.type]?.label || s.type}</span></td>
+            <td><span class="badge ${TYPE_META[s.type]?.cls || 'url'}">${D.esc(TYPE_META[s.type]?.label || s.type)}</span></td>
             <td><span class="src-url" title="${D.esc(s.url)}">${D.esc(s.url)}</span></td>
             <td><span class="badge ${s.health === '在线' ? 'wechat' : 'url'}" style="font-size:9.5px">${D.esc(s.health || '未知')}</span></td>
-            <td style="font-family:var(--mono)">${s.items || 0}</td>
+            <td style="font-family:var(--mono)">${D.esc(String(s.items == null ? 0 : s.items))}</td>
             <td style="font-family:var(--mono);font-size:10.5px;color:var(--txt-faint)">${s.lastSync ? D.timeAgo(s.lastSync, Date.now()) : '—'}</td>
             <td><div class="src-actions">
               <button class="btn small" data-act="edit">编辑</button>

@@ -34,7 +34,7 @@ function showModal(html, after){
 }
 function closeModal(){ const m = document.getElementById('modalMask'); m && m.remove(); }
 function addTimer(fn, ms){ state.uiTimers.push(setTimeout(fn, ms)); }
-function clearTimers(){ state.uiTimers.forEach(clearTimeout); state.uiTimers = []; if(state.simTimer){ clearInterval(state.simTimer); state.simTimer = null; } }
+function clearTimers(){ state.uiTimers.forEach(clearTimeout); state.uiTimers = []; if(state.termIv){ clearInterval(state.termIv); state.termIv = null; } }
 
 /* ================= 启动 ================= */
 function boot(){
@@ -75,7 +75,7 @@ function startApp(){
   // 终端欢迎
   pushTerm('sys', 'SENTINEL VISION v2.6 · 情报网格已上线');
   pushTerm('ok', '已加载默认采集源 ' + D.getSources().filter(s => s.enabled).length + ' 个（含 RSS / 公众号 / X / URL 监控）');
-  pushTerm('sys', '静态部署模式：数据为本地演示快照，接入后端后自动切换真实采集');
+  pushTerm('sys', '静态部署模式：数据为本地演示快照 · 真实采集接入指引见 README');
 }
 
 /* ================= 路由 ================= */
@@ -88,6 +88,9 @@ function route(){
   clearTimers();
   if(state.globe){ state.globe.stop(); state.globe = null; }
   if(state.graphInst){ state.graphInst.stop(); state.graphInst = null; }
+  ['trend','donut','gauge'].forEach(k => { if(state[k] && state[k].destroy) state[k].destroy(); state[k] = null; });
+  (state.kpiSparks || []).forEach(s => s.destroy && s.destroy());
+  state.kpiSparks = [];
   state.route = dest;
   document.querySelectorAll('#mainNav a').forEach(a => {
     a.classList.toggle('active', a.getAttribute('data-route') === dest);
@@ -190,9 +193,10 @@ function renderDashboard(view){
   state.donut = SV.charts.donutChart(document.getElementById('donutBox'), dist);
   state.gauge = SV.charts.gaugeChart(document.getElementById('gaugeBox'), threatLevel(items));
   // KPI 迷你趋势
+  state.kpiSparks = [];
   view.querySelectorAll('.kpi-spark').forEach((box, i) => {
     const vals = trend.map(t => Math.max(1, t.count * [0.9, 0.35, 0.5, 0.12][i] + (i % 2) + 1));
-    SV.charts.sparkline(box, vals, ['rgb(0,229,255)', 'rgb(255,45,120)', 'rgb(139,92,246)', 'rgb(0,255,157)'][i]);
+    state.kpiSparks.push(SV.charts.sparkline(box, vals, ['rgb(0,229,255)', 'rgb(255,45,120)', 'rgb(139,92,246)', 'rgb(0,255,157)'][i]));
   });
   // 排行
   renderRanks();
@@ -221,7 +225,7 @@ function trendSeries(items, days){
   for(let i = days - 1; i >= 0; i--){
     const d = new Date(now - i * 86400000);
     const key = d.toISOString().slice(0, 10);
-    out.push({ label: key.slice(5), count: items.filter(x => new Date(x.ts).toISOString().slice(0,10) === key).length });
+    out.push({ label: key.slice(5), count: items.filter(x => Number.isFinite(x.ts) && new Date(x.ts).toISOString().slice(0,10) === key).length });
   }
   return out;
 }
@@ -279,6 +283,9 @@ function renderIntel(view){
         <div class="panel" style="display:flex;flex-direction:column;min-height:0">
           <span class="corner tl"></span><span class="corner tr"></span>
           <div class="panel-title">情报流 · INTEL FEED <span style="margin-left:auto;font-size:10px;color:var(--txt-faint)" id="intelCount"></span></div>
+          <div class="intel-filters" style="border-bottom:none;padding-bottom:2px">
+            <input class="intel-search" id="intelSearch" placeholder="搜索标题 / 来源 / 内容 / IOC…" style="margin-left:0;max-width:none;flex:1">
+          </div>
           <div class="intel-filters" id="sevChips"></div>
           <div class="intel-filters" id="catChips" style="border-top:none;padding-top:0"></div>
           <div class="intel-list" id="intelList"></div>
@@ -302,6 +309,8 @@ function renderIntel(view){
   renderIntelList();
   renderIocRank();
   renderCatRank();
+  const sb = document.getElementById('intelSearch');
+  if(sb) sb.addEventListener('input', () => { state.query = sb.value; renderIntelList(); });
 }
 function renderSevChips(){
   const box = document.getElementById('sevChips');
@@ -467,7 +476,8 @@ function typeLoop(){
     const cursor = document.createElement('i');
     cursor.className = 'cursor';
     body.appendChild(span); body.appendChild(cursor);
-    const iv = setInterval(() => {
+    if(state.termIv) clearInterval(state.termIv);
+    const iv = state.termIv = setInterval(() => {
       idx += 2;
       span.textContent = full.slice(0, idx);
       if(idx >= full.length){

@@ -8,6 +8,7 @@ function mkCanvas(container){
   const canvas = document.createElement('canvas');
   container.appendChild(canvas);
   const ctx = canvas.getContext('2d');
+  let onResize = null;
   function resize(){
     const dpr = Math.min(2, window.devicePixelRatio || 1);
     const w = container.clientWidth || 300, h = container.clientHeight || 160;
@@ -16,7 +17,9 @@ function mkCanvas(container){
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     return { w, h };
   }
-  return { canvas, ctx, resize };
+  return { canvas, ctx, resize,
+    autoResize(drawFn){ onResize = drawFn; window.addEventListener('resize', drawFn); },
+    destroy(){ if(onResize){ window.removeEventListener('resize', onResize); onResize = null; } } };
 }
 const F = "'Cascadia Code',Consolas,monospace";
 
@@ -43,8 +46,8 @@ function sparkline(container, values, color){
     ctx.fillStyle = g; ctx.fill();
   }
   draw();
-  window.addEventListener('resize', draw);
-  return { draw };
+  inst.autoResize(draw);
+  return { draw, destroy(){ inst.destroy(); } };
 }
 
 /* ---- 14 日趋势面积图 ---- */
@@ -116,8 +119,8 @@ function trendChart(container, series){
     }
   }
   draw();
-  window.addEventListener('resize', draw);
-  return { draw };
+  inst.autoResize(draw);
+  return { draw, destroy(){ inst.destroy(); } };
 }
 
 /* ---- 严重度环形图 ---- */
@@ -171,8 +174,8 @@ function donutChart(container, dist){
     });
   }
   draw();
-  window.addEventListener('resize', draw);
-  return { draw };
+  inst.autoResize(draw);
+  return { draw, destroy(){ inst.destroy(); } };
 }
 
 /* ---- 威胁等级仪表 ---- */
@@ -216,8 +219,8 @@ function gaugeChart(container, score){
     ctx.textAlign = 'left';
   }
   draw();
-  window.addEventListener('resize', draw);
-  return { draw };
+  inst.autoResize(draw);
+  return { draw, destroy(){ inst.destroy(); } };
 }
 
 /* ---- 排行条（DOM 渲染，辅助） ---- */

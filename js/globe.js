@@ -66,6 +66,7 @@ function startGlobe(container, opts){
   const nodes = D.GEO_NODES.map((n, i) => ({ ...n, phase: i * 1.7, pop: 0 }));
   const arcs = [];
   const ripples = [];
+  let arcTimer = null;
   let sim = D.seeded(20260904);
 
   function spawnArc(){
@@ -99,7 +100,7 @@ function startGlobe(container, opts){
         // 冲击波纹
         ripples.push({ node: arc.b, t: 0, hue: arc.hue });
         if(opts.onImpact) opts.onImpact(arc);
-        setTimeout(spawnArc, 400 + Math.random() * 2600);
+        arcTimer = setTimeout(spawnArc, 400 + Math.random() * 2600);
       }
     }
     for(let i = ripples.length - 1; i >= 0; i--){
@@ -293,7 +294,7 @@ function startGlobe(container, opts){
   requestAnimationFrame(frame);
 
   return {
-    stop(){ running = false; },
+    stop(){ running = false; if(arcTimer) clearTimeout(arcTimer); window.removeEventListener('resize', resize); },
     resize,
     spawnArc
   };

@@ -150,7 +150,8 @@ function classifyCategory(text){
 }
 function threatScore(entry){
   const base = { crit: 90, high: 70, med: 45, low: 22, info: 10 }[entry.severity] || 10;
-  const heat = Math.max(0, 1 - entry.hoursAgo / 672); // 两周热度衰减
+  const ha = Number.isFinite(entry.hoursAgo) ? entry.hoursAgo : 672;
+  const heat = Math.max(0, 1 - ha / 672); // 两周热度衰减
   return Math.round(base * 0.65 + heat * 35);
 }
 
